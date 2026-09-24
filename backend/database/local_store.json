@@ -1,0 +1,349 @@
+{
+  "users": [
+    {
+      "id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "name": "Divesh Reddy",
+      "email": "divesh@woundwise.local",
+      "password_hash": "$2a$10$Z5gWEs.DhL3QKB.C5vqY8OpGUGo9H0AfTr7mlc.uaBQ4C1TZl.q.i",
+      "role": "Patient",
+      "phone": "+1 (555) 382-9012",
+      "created_at": "2026-09-23T23:52:52.516Z",
+      "updated_at": "2026-09-23T23:52:52.518Z"
+    }
+  ],
+  "wounds": [
+    {
+      "id": "04354058-ef92-457c-91ce-9526947ced07",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "title": "Left Forearm Burn",
+      "location": "Left Forearm",
+      "status": "Active",
+      "created_at": "2026-09-23T23:58:21.196Z",
+      "updated_at": "2026-09-23T23:58:21.196Z"
+    },
+    {
+      "id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "title": "Forearm Brun",
+      "location": "Right Forearm",
+      "status": "Active",
+      "created_at": "2026-09-24T00:22:00.571Z",
+      "updated_at": "2026-09-24T00:22:00.571Z"
+    }
+  ],
+  "wound_entries": [
+    {
+      "id": "d6ce02db-d6ff-4801-a36f-1f970c7c0062",
+      "wound_id": "04354058-ef92-457c-91ce-9526947ced07",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790207901185_38594962.jpg",
+      "original_filename": "wound_test.jpg",
+      "mime_type": "image/jpeg",
+      "file_size": 134,
+      "notes": "Mild redness, no exudate, dressing changed today.",
+      "is_followup": false,
+      "quality_metrics": null,
+      "entry_date": "2026-09-23T23:58:21.200Z",
+      "created_at": "2026-09-23T23:58:21.201Z",
+      "updated_at": "2026-09-23T23:58:21.201Z"
+    },
+    {
+      "id": "c582f5ab-1d4c-4cf6-b7fa-a90d870d867c",
+      "wound_id": "04354058-ef92-457c-91ce-9526947ced07",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790207901216_54a153f3.jpg",
+      "original_filename": "wound_day3.jpg",
+      "mime_type": "image/jpeg",
+      "file_size": 134,
+      "notes": "Day 3 follow-up: Redness receding, clean wound bed.",
+      "is_followup": true,
+      "quality_metrics": null,
+      "entry_date": "2026-09-23T23:58:21.224Z",
+      "created_at": "2026-09-23T23:58:21.224Z",
+      "updated_at": "2026-09-23T23:58:21.224Z"
+    },
+    {
+      "id": "867351c2-c5de-4e91-8102-f0d57c949a3f",
+      "wound_id": "04354058-ef92-457c-91ce-9526947ced07",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790208204244_ae04286b.png",
+      "original_filename": "Screenshot 2026-09-22 205222.png",
+      "mime_type": "image/png",
+      "file_size": 1000154,
+      "notes": "",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":1117,\"height\":626,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T00:03:24.271Z",
+      "created_at": "2026-09-24T00:03:24.271Z",
+      "updated_at": "2026-09-24T00:03:24.271Z"
+    },
+    {
+      "id": "2a0f4cce-0ecb-4b99-ab28-371ee54dc75a",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790209320537_1c5dae53.png",
+      "original_filename": "Screenshot 2026-09-22 205222.png",
+      "mime_type": "image/png",
+      "file_size": 1000154,
+      "notes": "",
+      "is_followup": false,
+      "quality_metrics": "{\"width\":1117,\"height\":626,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T00:22:00.574Z",
+      "created_at": "2026-09-24T00:22:00.574Z",
+      "updated_at": "2026-09-24T00:22:00.574Z"
+    },
+    {
+      "id": "a5c051cc-fcfe-4e6b-81b9-191512659d6e",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790219375260_ac60134f.png",
+      "original_filename": "Screenshot 2026-09-22 205222.png",
+      "mime_type": "image/png",
+      "file_size": 1000154,
+      "notes": "",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":1117,\"height\":626,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T03:09:35.291Z",
+      "created_at": "2026-09-24T03:09:35.292Z",
+      "updated_at": "2026-09-24T03:09:35.292Z"
+    },
+    {
+      "id": "162a8b25-f906-4479-ad41-0f4faba5cc6e",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790219420382_ce165b2f.png",
+      "original_filename": "Screenshot 2026-09-22 143548.png",
+      "mime_type": "image/png",
+      "file_size": 611957,
+      "notes": "nothing",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":923,\"height\":573,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T03:10:20.398Z",
+      "created_at": "2026-09-24T03:10:20.399Z",
+      "updated_at": "2026-09-24T03:10:20.399Z"
+    },
+    {
+      "id": "a4bef162-16ca-42f9-bfa4-130c0302b452",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790256001077_6b16ff3c.png",
+      "original_filename": "Screenshot 2026-09-22 143548.png",
+      "mime_type": "image/png",
+      "file_size": 611957,
+      "notes": "nothing",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":923,\"height\":573,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T13:20:01.097Z",
+      "created_at": "2026-09-24T13:20:01.098Z",
+      "updated_at": "2026-09-24T13:20:01.098Z"
+    },
+    {
+      "id": "43a60b8b-ebda-4284-bfd2-5549b6aade5d",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790256078251_32993f96.png",
+      "original_filename": "Screenshot 2026-09-22 205222.png",
+      "mime_type": "image/png",
+      "file_size": 1000154,
+      "notes": "",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":1117,\"height\":626,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T13:21:18.290Z",
+      "created_at": "2026-09-24T13:21:18.291Z",
+      "updated_at": "2026-09-24T13:21:18.291Z"
+    },
+    {
+      "id": "f72c9d2e-aa55-4c36-82cb-9a200a28a2a4",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790256796330_7e27bd08.png",
+      "original_filename": "Screenshot 2026-09-22 205222.png",
+      "mime_type": "image/png",
+      "file_size": 1000154,
+      "notes": "",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":1117,\"height\":626,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T13:33:16.343Z",
+      "created_at": "2026-09-24T13:33:16.343Z",
+      "updated_at": "2026-09-24T13:33:16.343Z"
+    },
+    {
+      "id": "58589c19-2b5a-49b1-bb9b-c7561f6ae0fe",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790258074609_f5cfed99.png",
+      "original_filename": "Screenshot 2026-09-22 205222.png",
+      "mime_type": "image/png",
+      "file_size": 1000154,
+      "notes": "",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":1117,\"height\":626,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T13:54:34.633Z",
+      "created_at": "2026-09-24T13:54:34.633Z",
+      "updated_at": "2026-09-24T13:54:34.633Z"
+    },
+    {
+      "id": "59c4587d-a316-424e-88da-fcc2e8006728",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "image_filename": "wound_1790258257241_9f78fa05.png",
+      "original_filename": "Screenshot 2026-09-22 205222.png",
+      "mime_type": "image/png",
+      "file_size": 1000154,
+      "notes": "",
+      "is_followup": true,
+      "quality_metrics": "{\"width\":1117,\"height\":626,\"resolutionOk\":true,\"sharp\":true,\"lightingOk\":true,\"tooDark\":false,\"tooBright\":false}",
+      "entry_date": "2026-09-24T13:57:37.263Z",
+      "created_at": "2026-09-24T13:57:37.263Z",
+      "updated_at": "2026-09-24T13:57:37.263Z"
+    }
+  ],
+  "assessments": [
+    {
+      "id": "7a85ab97-f4fb-480f-8bf1-d819bb574b55",
+      "entry_id": "d6ce02db-d6ff-4801-a36f-1f970c7c0062",
+      "wound_id": "04354058-ef92-457c-91ce-9526947ced07",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"Mild redness, no exudate, dressing changed today.\",\"qualityChecked\":false}",
+      "created_at": "2026-09-23T23:58:21.205Z",
+      "updated_at": "2026-09-23T23:58:21.205Z"
+    },
+    {
+      "id": "f5ce2b63-99e9-43b2-ae74-7d71d9af9b82",
+      "entry_id": "c582f5ab-1d4c-4cf6-b7fa-a90d870d867c",
+      "wound_id": "04354058-ef92-457c-91ce-9526947ced07",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"Day 3 follow-up: Redness receding, clean wound bed.\",\"qualityChecked\":false}",
+      "created_at": "2026-09-23T23:58:21.233Z",
+      "updated_at": "2026-09-23T23:58:21.233Z"
+    },
+    {
+      "id": "70632527-9408-49a0-a9a9-0385c2cffdfe",
+      "entry_id": "867351c2-c5de-4e91-8102-f0d57c949a3f",
+      "wound_id": "04354058-ef92-457c-91ce-9526947ced07",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T00:03:24.275Z",
+      "updated_at": "2026-09-24T00:03:24.275Z"
+    },
+    {
+      "id": "22ad3e68-3ee3-43b6-9599-d40f4a2586c9",
+      "entry_id": "2a0f4cce-0ecb-4b99-ab28-371ee54dc75a",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T00:22:00.579Z",
+      "updated_at": "2026-09-24T00:22:00.579Z"
+    },
+    {
+      "id": "8b5a5044-d8df-4a6d-8276-f3281b830b7c",
+      "entry_id": "a5c051cc-fcfe-4e6b-81b9-191512659d6e",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T03:09:35.297Z",
+      "updated_at": "2026-09-24T03:09:35.297Z"
+    },
+    {
+      "id": "88de6ea6-14b6-47c4-902e-9d60b34d067b",
+      "entry_id": "162a8b25-f906-4479-ad41-0f4faba5cc6e",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"nothing\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T03:10:20.404Z",
+      "updated_at": "2026-09-24T03:10:20.404Z"
+    },
+    {
+      "id": "cbc51847-cedc-4502-9512-dfd09688e176",
+      "entry_id": "a4bef162-16ca-42f9-bfa4-130c0302b452",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"nothing\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T13:20:01.103Z",
+      "updated_at": "2026-09-24T13:20:01.103Z"
+    },
+    {
+      "id": "9bcf1880-a895-4a84-b0a3-cac834510a8e",
+      "entry_id": "43a60b8b-ebda-4284-bfd2-5549b6aade5d",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T13:21:18.307Z",
+      "updated_at": "2026-09-24T13:21:18.307Z"
+    },
+    {
+      "id": "faff7db1-9655-46ee-8335-46dbe34505c4",
+      "entry_id": "f72c9d2e-aa55-4c36-82cb-9a200a28a2a4",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T13:33:16.346Z",
+      "updated_at": "2026-09-24T13:33:16.346Z"
+    },
+    {
+      "id": "c92feb88-4df5-49c9-9ed5-fd002dab34db",
+      "entry_id": "58589c19-2b5a-49b1-bb9b-c7561f6ae0fe",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T13:54:34.642Z",
+      "updated_at": "2026-09-24T13:54:34.642Z"
+    },
+    {
+      "id": "f7f8ea5f-7e25-4feb-9de3-62f6fec68841",
+      "entry_id": "59c4587d-a316-424e-88da-fcc2e8006728",
+      "wound_id": "f6b35982-966a-4a03-af36-ff54c5fa3af1",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "status": "not_configured",
+      "summary": "Analysis not configured",
+      "details": "{\"statusMessage\":\"AI-assisted analysis is not currently enabled on this instance.\",\"configurationStatus\":\"API key not configured in backend environment.\",\"trackingActive\":true,\"clinicalNote\":\"Wound documentation and progression tracking remain active. Please consult a qualified medical professional for clinical wound assessment and diagnosis.\",\"recordedNotes\":\"\",\"qualityChecked\":true}",
+      "created_at": "2026-09-24T13:57:37.274Z",
+      "updated_at": "2026-09-24T13:57:37.274Z"
+    }
+  ],
+  "support_tickets": [
+    {
+      "id": "44b43073-379c-4a94-9b31-524ff86b1f98",
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "name": "Divesh Reddy",
+      "email": "divesh@woundwise.local",
+      "category": "Wound Tracking Question",
+      "subject": "Question on follow-up timing",
+      "message": "What is the recommended interval for taking photos of a healing burn?",
+      "priority": "Normal",
+      "status": "Open",
+      "created_at": "2026-09-23T23:58:21.336Z",
+      "updated_at": "2026-09-23T23:58:21.336Z"
+    }
+  ],
+  "user_preferences": [
+    {
+      "user_id": "bb542379-b74c-4eda-a406-ab318697f058",
+      "email_notifications": true,
+      "healing_reminders": true,
+      "dark_mode": true,
+      "created_at": "2026-09-23T23:52:52.519Z",
+      "updated_at": "2026-09-24T00:03:55.871Z"
+    }
+  ]
+}
