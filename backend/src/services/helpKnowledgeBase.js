@@ -99,8 +99,8 @@ const KNOWLEDGE_BASE = [
   {
     id: 'swelling_elevation',
     category: 'swelling',
-    keywords: ['swelling', 'swoll', 'swollen', 'edema', 'puffy', 'elevate', 'puffiness'],
-    answer: "Mild swelling is expected during early inflammation. To manage swelling:\n1. Elevate the injured area above heart level when sitting or lying down.\n2. Rest the limb and avoid prolonged standing or dependency.\n3. Do not apply tight bandages that restrict circulation.\nIf swelling becomes severe, rapidly increases, or causes numbness or cold fingers/toes, seek prompt medical evaluation."
+    keywords: ['swelling', 'swoll', 'swollen', 'edema', 'puffy', 'elevate', 'puffiness', 'swelling came back', 'swelling returned'],
+    answer: "Mild swelling can return after increased walking or standing. Is the swelling increasing quickly, and do you also have spreading redness, worsening pain, fever, or discharge?\n\nIf there are no warning signs:\n1. Elevate the injured area above heart level when resting.\n2. Rest the limb and avoid prolonged standing.\n3. Keep clothing loose around the area.\nIf swelling is severe, rapidly increasing, or accompanied by fever or spreading redness, seek medical evaluation promptly."
   },
   {
     id: 'pain_management',

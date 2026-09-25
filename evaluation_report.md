@@ -1,11 +1,14 @@
 # WoundWise Help Assistant Evaluation Report
 
-**Date**: 2026-09-25T00:25:32.051Z  
+**Date**: 2026-09-25T00:56:42.274Z  
 **Total Evaluation Questions**: 55
+
+> [!NOTE]
+> **Scope Disclaimer**: This evaluation report exclusively tests and validates the conversational **Help Assistant Q&A system** (patient guidance regarding food, showering, dressing care, hydration, exercise, and general recovery questions). It does **NOT** evaluate or validate image-based wound measurement calculations, boundary segmentation, or clinical triage risk-assessment logic.
 
 ---
 
-## Executive Summary
+## Help Assistant Q&A Evaluation Summary
 
 | Mode | Total Questions | Passed | Success Rate | Primary Source |
 |---|---|---|---|---|

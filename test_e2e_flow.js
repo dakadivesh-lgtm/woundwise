@@ -2,6 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 async function runTests() {
+  if (process.env.ALLOW_TEST_DATA !== 'true' && process.env.NODE_ENV !== 'test') {
+    console.error('\n❌ ERROR: test_e2e_flow.js is blocked from executing against live demo data.');
+    console.error('To run this test without polluting live demo database, set ALLOW_TEST_DATA=true e.g.:');
+    console.error('  ALLOW_TEST_DATA=true node test_e2e_flow.js\n');
+    process.exit(1);
+  }
+
   console.log('🧪 Starting WoundWise Full-Stack API & Longitudinal Tracking Verification...\n');
   const baseUrl = 'http://127.0.0.1:5000/api';
 

@@ -12,7 +12,7 @@ function getPolygonArea(points) {
   return Math.abs(area / 2);
 }
 
-// Real image quality validation using canvas pixel data (no random values)
+// Real image quality validation using canvas pixel data
 function validateImageQuality(canvas) {
   const ctx = canvas.getContext('2d');
   const w = canvas.width;
@@ -54,18 +54,16 @@ function validateImageQuality(canvas) {
   return { valid: confidence !== 'poor', issues, confidence };
 }
 
-// Heuristic color-cluster segmentation — works on ANY wound photo
-// Uses redness + darkness scoring then ray-marches from weighted centroid
-function segmentWound(canvas) {
+// Computer-assisted boundary proposal around a target point
+function segmentWoundAroundPoint(canvas, targetX, targetY) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;
 
-  // Assessment ROI: centre 55% of image (NOT full image as denominator)
-  const roiX = Math.round(W * 0.225);
-  const roiY = Math.round(H * 0.225);
-  const roiW = Math.round(W * 0.55);
-  const roiH = Math.round(H * 0.55);
+  const roiW = Math.round(W * 0.45);
+  const roiH = Math.round(H * 0.45);
+  const roiX = Math.max(0, Math.min(W - roiW, Math.round(targetX - roiW / 2)));
+  const roiY = Math.max(0, Math.min(H - roiH, Math.round(targetY - roiH / 2)));
 
   const data = ctx.getImageData(roiX, roiY, roiW, roiH).data;
   const scores = new Float32Array(roiW * roiH);
@@ -124,8 +122,7 @@ function segmentWound(canvas) {
 export default function WoundSegmentationEditor({ imageUrl, initialData, onSave, onCancel }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const imgRef = useRef(null);
-  const offscreenRef = useRef(null); // hidden canvas for pixel analysis
+  const offscreenRef = useRef(null);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [quality, setQuality] = useState({ valid: true, issues: [], confidence: 'high' });
@@ -133,19 +130,19 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
   const [roi, setRoi] = useState({ x: 10, y: 10, w: 100, h: 100 });
   const [boundary, setBoundary] = useState([]);
   
-  // Scale marker state
-  const [hasScaleMarker, setHasScaleMarker] = useState(false);
-  const [scaleLine, setScaleLine] = useState({ p1: { x: 0, y: 0 }, p2: { x: 0, y: 0 }, physicalLength: 2 }); // 2cm default
+  // Confirmed Scale Reference State (Task 10)
+  const [refObjectType, setRefObjectType] = useState('Coin'); // 'Coin', 'Ruler', 'Other'
+  const [isScaleConfirmed, setIsScaleConfirmed] = useState(false);
+  const [scaleLine, setScaleLine] = useState({ p1: { x: 0, y: 0 }, p2: { x: 0, y: 0 }, physicalLength: 2.0 });
 
   // Interaction state
-  const [draggingItem, setDraggingItem] = useState(null); // { type: 'boundary'|'roi'|'scale', index: number }
+  const [draggingItem, setDraggingItem] = useState(null);
 
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = imageUrl;
     img.onload = () => {
-      // Build offscreen canvas (capped at 1080px wide) for all pixel analysis
       const maxW = 1080;
       const scale = img.width > maxW ? maxW / img.width : 1;
       const offW = Math.round(img.width * scale);
@@ -156,7 +153,6 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
       off.getContext('2d').drawImage(img, 0, 0, offW, offH);
       offscreenRef.current = off;
 
-      // Real quality check from pixel data
       const q = validateImageQuality(off);
       setQuality(q);
 
@@ -164,20 +160,20 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
         setRoi(initialData.roi);
         setBoundary(initialData.boundary);
         if (initialData.scaleLine) {
-          setHasScaleMarker(true);
           setScaleLine(initialData.scaleLine);
+          setIsScaleConfirmed(Boolean(initialData.isScaleConfirmed));
         }
         setSegConfidence(initialData.segConfidence || 'good');
       } else {
-        // Real heuristic segmentation on pixel data
-        const seg = segmentWound(off);
+        // Computer-assisted wound boundary proposal around image center
+        const seg = segmentWoundAroundPoint(off, offW / 2, offH / 2);
         setRoi(seg.roi);
         setBoundary(seg.boundary);
         setSegConfidence(seg.segConfidence);
         setScaleLine({
-          p1: { x: offW * 0.75, y: offH * 0.88 },
-          p2: { x: offW * 0.75 + Math.round(offW * 0.15), y: offH * 0.88 },
-          physicalLength: 2
+          p1: { x: offW * 0.7, y: offH * 0.88 },
+          p2: { x: offW * 0.7 + Math.round(offW * 0.15), y: offH * 0.88 },
+          physicalLength: 2.0
         });
       }
       setIsLoaded(true);
@@ -197,17 +193,17 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
     canvas.width = off.width;
     canvas.height = off.height;
 
-    // Draw image from offscreen canvas
+    // Draw base image
     ctx.drawImage(off, 0, 0);
 
     // Draw ROI
-    ctx.strokeStyle = '#F59E0B'; // Amber
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = 3;
     ctx.setLineDash([8, 8]);
     ctx.strokeRect(roi.x, roi.y, roi.w, roi.h);
     ctx.setLineDash([]);
     
-    // Draw ROI corners (for dragging)
+    // Draw ROI handles
     ctx.fillStyle = '#F59E0B';
     const corners = [
       { x: roi.x, y: roi.y },
@@ -221,7 +217,7 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
       ctx.fill();
     });
 
-    // Draw Boundary Polygon
+    // Draw Computer-Assisted Boundary Polygon
     if (boundary.length > 0) {
       ctx.beginPath();
       ctx.moveTo(boundary[0].x, boundary[0].y);
@@ -230,7 +226,7 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
       }
       ctx.closePath();
       
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)'; // Red tint
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
       ctx.fill();
       ctx.strokeStyle = '#EF4444';
       ctx.lineWidth = 3;
@@ -248,16 +244,16 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
       });
     }
 
-    // Draw Scale Marker
-    if (hasScaleMarker) {
-      ctx.strokeStyle = '#38B2AC'; // Teal
+    // Draw Scale Reference Line
+    if (isScaleConfirmed) {
+      ctx.strokeStyle = '#059669'; // Emerald green when confirmed
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(scaleLine.p1.x, scaleLine.p1.y);
       ctx.lineTo(scaleLine.p2.x, scaleLine.p2.y);
       ctx.stroke();
 
-      ctx.fillStyle = '#38B2AC';
+      ctx.fillStyle = '#059669';
       [scaleLine.p1, scaleLine.p2].forEach(pt => {
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
@@ -268,9 +264,8 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
 
   useEffect(() => {
     draw();
-  }, [isLoaded, roi, boundary, hasScaleMarker, scaleLine]);
+  }, [isLoaded, roi, boundary, isScaleConfirmed, scaleLine]);
 
-  // Mouse interaction logic
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const scaleX = canvasRef.current.width / rect.width;
@@ -281,13 +276,13 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
     };
   };
 
-  const HIT_RADIUS = 20;
+  const HIT_RADIUS = 22;
 
   const handleMouseDown = (e) => {
     const pos = getMousePos(e);
 
     // Check scale marker points
-    if (hasScaleMarker) {
+    if (isScaleConfirmed) {
       if (Math.hypot(pos.x - scaleLine.p1.x, pos.y - scaleLine.p1.y) < HIT_RADIUS) {
         setDraggingItem({ type: 'scale', index: 1 });
         return;
@@ -318,6 +313,14 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
         setDraggingItem({ type: 'roi', id: corners[i].id });
         return;
       }
+    }
+
+    // Tap-to-seed: User tapped photo to generate boundary around tapped point!
+    if (offscreenRef.current) {
+      const seg = segmentWoundAroundPoint(offscreenRef.current, pos.x, pos.y);
+      setRoi(seg.roi);
+      setBoundary(seg.boundary);
+      setSegConfidence(seg.segConfidence);
     }
   };
 
@@ -353,7 +356,6 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
         newRoi.h = pos.y - newRoi.y;
         newRoi.x = pos.x;
       }
-      // Keep positive dimensions
       if (newRoi.w < 20) newRoi.w = 20;
       if (newRoi.h < 20) newRoi.h = 20;
       setRoi(newRoi);
@@ -369,10 +371,11 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
   const roiAreaPx = roi.w * roi.h;
   const coveragePct = roiAreaPx > 0 ? (woundAreaPx / roiAreaPx) * 100 : 0;
 
+  // Task 10: Calculate physicalAreaCm2 ONLY when scale is explicitly confirmed
   let physicalAreaCm2 = null;
-  if (hasScaleMarker) {
+  if (isScaleConfirmed) {
     const distPx = Math.hypot(scaleLine.p1.x - scaleLine.p2.x, scaleLine.p1.y - scaleLine.p2.y);
-    if (distPx > 0) {
+    if (distPx > 0 && scaleLine.physicalLength > 0) {
       const pixelsPerCm = distPx / scaleLine.physicalLength;
       const pxPerCm2 = pixelsPerCm * pixelsPerCm;
       physicalAreaCm2 = woundAreaPx / pxPerCm2;
@@ -380,22 +383,33 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
   }
 
   const handleConfirm = async () => {
+    const offW = offscreenRef.current?.width || 640;
+    const offH = offscreenRef.current?.height || 480;
+
+    // Task 11: Store normalized boundary coordinates relative to source image
+    const normalizedBoundary = boundary.map(pt => ({
+      x: pt.x / offW,
+      y: pt.y / offH
+    }));
+
     const dataToSave = {
       coveragePct,
       coverage_pct: coveragePct,
-      physicalAreaCm2,
-      wound_area_cm2: physicalAreaCm2,
+      physicalAreaCm2: isScaleConfirmed ? physicalAreaCm2 : null,
+      wound_area_cm2: isScaleConfirmed ? physicalAreaCm2 : null,
       woundAreaPx,
       wound_area_px: woundAreaPx,
       roi,
       boundary,
-      hasScaleMarker,
+      normalizedBoundary,
+      sourceImageWidth: offW,
+      sourceImageHeight: offH,
+      isScaleConfirmed,
+      hasScaleMarker: isScaleConfirmed,
       scaleLine,
       quality,
       segConfidence,
-      seg_confidence: segConfidence,
-      imageWidth: offscreenRef.current?.width || 640,
-      imageHeight: offscreenRef.current?.height || 480
+      seg_confidence: segConfidence
     };
 
     const entryId = initialData?.entryId || initialData?.id;
@@ -415,16 +429,20 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
       position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--bg)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden'
     }}>
+      {/* Header bar */}
       <div style={{ padding: '16px 24px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Review Wound Boundary</h2>
+        <div>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>Computer-Assisted Wound Boundary</h2>
+          <p style={{ fontSize: '12.5px', color: '#64748B', marginTop: 2 }}>Tap photo to re-seed boundary or drag handles to refine outline.</p>
+        </div>
         <div>
           <button className="btn-outline" onClick={onCancel} style={{ marginRight: 12 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleConfirm} disabled={quality.confidence === 'poor'}>Confirm & Save</button>
+          <button className="btn-primary" onClick={handleConfirm} disabled={quality.confidence === 'poor'}>Confirm Boundary &amp; Save</button>
         </div>
       </div>
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Left: Canvas Area */}
+        {/* Canvas Area */}
         <div 
           ref={containerRef} 
           style={{ flex: 1, padding: 20, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0F172A', position: 'relative' }}
@@ -439,83 +457,116 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
               maxWidth: '100%', 
               maxHeight: '100%', 
               objectFit: 'contain',
-              cursor: draggingItem ? 'grabbing' : 'crosshair',
+              cursor: draggingItem ? 'grabbing' : 'pointer',
               boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
             }}
           />
         </div>
 
-        {/* Right: Controls Area */}
+        {/* Right Controls Panel */}
         <div style={{ width: 340, background: 'var(--card-bg)', borderLeft: '1px solid var(--border)', padding: 24, overflowY: 'auto' }}>
           
           {quality.confidence === 'poor' && (
-            <div style={{ padding: 16, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, marginBottom: 20 }}>
-              <h4 style={{ color: '#991B1B', fontWeight: 600, marginBottom: 8 }}>Quality Warning</h4>
-              <p style={{ fontSize: 13, color: '#7F1D1D' }}>
-                Unable to calculate reliably due to: {quality.issues.join(', ')}. Please retake the photo or adjust boundary manually.
-              </p>
-            </div>
-          )}
-
-          {quality.confidence !== 'poor' && (segConfidence === 'low' || segConfidence === 'none') && (
-            <div style={{ padding: 16, background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, marginBottom: 20 }}>
-              <h4 style={{ color: '#92400E', fontWeight: 600, marginBottom: 8 }}>Low Detection Confidence</h4>
-              <p style={{ fontSize: 13, color: '#78350F' }}>
-                Wound boundaries were auto-detected with low confidence. Please manually adjust the red boundary handles to refine the area.
+            <div style={{ padding: 14, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, marginBottom: 20 }}>
+              <h4 style={{ color: '#991B1B', fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Quality Warning</h4>
+              <p style={{ fontSize: 12, color: '#7F1D1D' }}>
+                Image issues detected: {quality.issues.join(', ')}. Please retake or adjust boundary manually.
               </p>
             </div>
           )}
 
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 12 }}>Calculated Metrics</h3>
+            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 12 }}>Calculated Metrics</h3>
             
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Wound Coverage</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--blue)' }}>
-                {quality.confidence === 'poor' ? '--' : `${coveragePct.toFixed(1)}%`}
+              <div style={{ fontSize: 12, color: '#64748B' }}>Relative Wound Area</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: '#2563EB' }}>
+                {quality.confidence === 'poor' ? '--' : `${coveragePct.toFixed(1)}% ROI area`}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Percentage of selected assessment area (ROI)</div>
+              <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}>Percentage of selected assessment region</div>
             </div>
 
             <div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Physical Wound Area</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: hasScaleMarker ? 'var(--teal)' : 'var(--text-muted)' }}>
-                {quality.confidence === 'poor' ? '--' : (hasScaleMarker ? `${physicalAreaCm2.toFixed(2)} cm²` : 'Scale reference required')}
+              <div style={{ fontSize: 12, color: '#64748B' }}>Physical Wound Area (cm²)</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: isScaleConfirmed ? '#059669' : '#94A3B8' }}>
+                {quality.confidence === 'poor' 
+                  ? '--' 
+                  : (isScaleConfirmed && physicalAreaCm2 != null ? `${physicalAreaCm2.toFixed(2)} cm²` : 'Scale unconfirmed (cm² unavailable)')}
               </div>
             </div>
           </div>
 
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 12 }}>Manual Adjustments</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              Drag the red nodes to adjust the wound boundary. Drag the amber corners to adjust the Region of Interest (ROI).
-            </p>
+            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 12 }}>Scale Reference Setup</h3>
             
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 12 }}>
-              <input 
-                type="checkbox" 
-                checked={hasScaleMarker} 
-                onChange={(e) => setHasScaleMarker(e.target.checked)} 
-              />
-              Include Scale Marker
-            </label>
-
-            {hasScaleMarker && (
-              <div style={{ marginLeft: 24 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                  Drag the teal line over a known reference object (e.g., a coin or ruler).
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input 
-                    type="number" 
-                    value={scaleLine.physicalLength} 
-                    onChange={(e) => setScaleLine({...scaleLine, physicalLength: parseFloat(e.target.value) || 1})}
-                    style={{ width: 80, padding: 8, borderRadius: 4, border: '1px solid var(--border)' }}
-                  />
-                  <span style={{ fontSize: 14 }}>cm</span>
-                </div>
+            <div style={{ background: '#F8FAF9', border: '1px solid #E2E8E3', borderRadius: '12px', padding: '14px', marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#0F172A', marginBottom: 8 }}>
+                Reference Object
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+                {[
+                  { label: 'Coin', type: 'Coin', defLen: 2.0 },
+                  { label: 'Ruler', type: 'Ruler', defLen: 1.0 },
+                  { label: 'Other', type: 'Other', defLen: 2.5 }
+                ].map(obj => (
+                  <button
+                    key={obj.type}
+                    type="button"
+                    onClick={() => {
+                      setRefObjectType(obj.type);
+                      setScaleLine(prev => ({ ...prev, physicalLength: obj.defLen }));
+                    }}
+                    style={{
+                      padding: '6px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      border: refObjectType === obj.type ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                      background: refObjectType === obj.type ? '#EFF6FF' : '#FFFFFF',
+                      color: refObjectType === obj.type ? '#1E40AF' : '#334155',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {obj.label}
+                  </button>
+                ))}
               </div>
-            )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#475569' }}>Known Width:</span>
+                <input 
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={scaleLine.physicalLength} 
+                  onChange={(e) => setScaleLine({ ...scaleLine, physicalLength: parseFloat(e.target.value) || 1.0 })}
+                  style={{ width: 70, padding: '6px 8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 13, fontWeight: 600 }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 600 }}>cm</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsScaleConfirmed(prev => !prev)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  background: isScaleConfirmed ? '#059669' : '#153C2E',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '12.5px',
+                  cursor: 'pointer',
+                  border: 'none'
+                }}
+              >
+                {isScaleConfirmed ? '✓ Scale Confirmed' : 'Confirm Reference Scale'}
+              </button>
+            </div>
+
+            <p style={{ fontSize: 11.5, color: '#64748B', lineHeight: 1.4 }}>
+              Tap anywhere on the photo to seed boundary around a wound point. Drag red handles to refine boundary vertices.
+            </p>
           </div>
 
         </div>

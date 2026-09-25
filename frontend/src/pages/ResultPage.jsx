@@ -6,7 +6,11 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
   const [showOverlay, setShowOverlay] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [segData, setSegData] = useState(resultData?.segmentationData || null);
-  const [rednessPct, setRednessPct] = useState(segData?.coveragePct != null ? `${segData.coveragePct.toFixed(1)}%` : null);
+  const [rednessPct, setRednessPct] = useState(null); // Explicitly separate from wound coveragePct
+  
+  const woundCoveragePct = segData?.coveragePct != null ? Number(segData.coveragePct) : (resultData?.coveragePct != null ? Number(resultData.coveragePct) : null);
+  const physicalAreaCm2 = segData?.physicalAreaCm2 != null ? Number(segData.physicalAreaCm2) : (resultData?.physicalAreaCm2 != null ? Number(resultData.physicalAreaCm2) : null);
+  const rednessEstimatePct = (rednessPct && rednessPct !== 'N/A') ? rednessPct : (resultData?.rednessEstimatePct || 'Not measured');
   
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
@@ -26,6 +30,18 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
   });
 
   const [isLocating, setIsLocating] = useState(false);
+  const [aiStatus, setAiStatus] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => {
+        setAiStatus(data?.aiEnabled ? 'active' : 'fallback');
+      })
+      .catch(() => setAiStatus('fallback'));
+  }, []);
+
+  const isAiActive = aiStatus === 'active' || resultData?.assessment?.status === 'analyzed' || resultData?.assessmentStatus === 'analyzed';
 
   const hasUrgent = resultData?.hasUrgentFlags || false;
   const triageLevel = (resultData?.triageLevel || resultData?.triage_level || resultData?.triage || '').toLowerCase();
@@ -95,7 +111,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
   const rawProgress = resultData?.healingProgress || 'Improving';
   const healingProgress = isBaseline ? 'Baseline' : (['Improving', 'Stable', 'Worsening'].includes(rawProgress) ? rawProgress : 'Improving');
 
-  // Compute redness coverage from actual pixel data once the image loads
+  // Compute redness coverage from actual pixel data sampled from the central wound region
   const computeRedness = (img) => {
     try {
       const off = document.createElement('canvas');
@@ -106,7 +122,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
       const ctx = off.getContext('2d');
       ctx.drawImage(img, 0, 0, off.width, off.height);
 
-      // ROI: centre 60% (not full image as denominator)
+      // ROI: sampled from the central wound region (center 60% rectangle)
       const roiX = Math.round(off.width * 0.2);
       const roiY = Math.round(off.height * 0.2);
       const roiW = Math.round(off.width * 0.6);
@@ -198,17 +214,39 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
 
       <section className="result-container" style={{ display: showEditor ? 'none' : 'block' }}>
         {/* Page Header */}
-        <div className="result-page-header">
-          <h1 className="result-page-title">Wound Health Result</h1>
-          <p className="result-page-subtitle">
-            <span className="completion-tick" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="9"/>
-                <polyline points="9 12 11 14 15 10"/>
-              </svg>
-            </span>
-            <span>Assessment completed {dateFormatted}</span>
-          </p>
+        <div className="result-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+          <div>
+            <h1 className="result-page-title">Wound Health Result</h1>
+            <p className="result-page-subtitle">
+              <span className="completion-tick" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+              </span>
+              <span>Assessment completed {dateFormatted}</span>
+            </p>
+          </div>
+          <div 
+            className="ai-status-badge"
+            id="ai-integration-status-badge"
+            title={isAiActive ? 'AI Analysis Active (Gemini API Connected)' : 'AI Analysis Inactive (Safe Local Fallback Mode)'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: 600,
+              backgroundColor: isAiActive ? '#E8F5E9' : '#F3F4F6',
+              color: isAiActive ? '#2E7D32' : '#4B5563',
+              border: `1px solid ${isAiActive ? '#A5D6A7' : '#D1D5DB'}`
+            }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isAiActive ? '#2E7D32' : '#9CA3AF' }} />
+            <span>{isAiActive ? '🤖 AI Analysis: Active' : '🤖 AI Analysis: Standby / Local Fallback'}</span>
+          </div>
         </div>
 
         {/* Main Layout: 60% Photo Card / 40% Results Panel */}
@@ -275,7 +313,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
             <div className="overlay-legend" style={{ display: 'flex', marginTop: 10, justifyContent: 'space-between', fontSize: '11.5px', color: 'var(--text-secondary)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 12, height: 12, background: 'rgba(59, 130, 246, 0.3)', border: '1.5px solid #2563EB', borderRadius: 2 }} />
-                Surrounding periwound skin zone
+                Central wound region
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 12, height: 12, background: 'rgba(239, 68, 68, 0.65)', border: '1.5px solid #DC2626', borderRadius: 2 }} />
@@ -286,7 +324,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
 
           <div className="result-photo-meta">
             <span>Image Resolution: Verified (1080px max)</span>
-            <span>Focus &amp; Lighting: Optimal</span>
+            <span>Focus &amp; Lighting: Photo quality check pending</span>
           </div>
         </div>
 
@@ -301,11 +339,11 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
               <div>
                 <div className="result-metric-label">Wound size / area</div>
                 <div className="result-metric-value-num" style={{ fontSize: '20px' }}>
-                  {segData?.physicalAreaCm2 
-                    ? `${segData.physicalAreaCm2.toFixed(2)} cm²` 
-                    : segData?.coveragePct != null 
-                    ? `${segData.coveragePct.toFixed(1)}% ROI area`
-                    : (resultData?.woundArea || 'Not measured')}
+                  {physicalAreaCm2 != null 
+                    ? `${physicalAreaCm2.toFixed(2)} cm²` 
+                    : (woundCoveragePct != null 
+                    ? `${woundCoveragePct.toFixed(1)}% ROI area`
+                    : 'Not measured')}
                 </div>
               </div>
               <div className="result-metric-subtext">Measured within selected wound boundary</div>
@@ -316,10 +354,10 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
               <div>
                 <div className="result-metric-label">Estimated redness coverage</div>
                 <div className="result-metric-value-num">
-                  {rednessPct || resultData?.rednessCoverage || 'Not measured'}
+                  {rednessEstimatePct}
                 </div>
               </div>
-              <div className="result-metric-subtext">Measured across surrounding skin zone</div>
+              <div className="result-metric-subtext">Sampled from the central wound region</div>
             </div>
 
             {/* 3. Swelling level (Bottom-left) */}

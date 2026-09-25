@@ -1,64 +1,87 @@
 const config = require('../config');
 const { retrieveKnowledge, normalizeQueryText } = require('./helpKnowledgeBase');
 
-// Urgent symptom patterns for deterministic detection
-const URGENT_SYMPTOM_PATTERNS = [
-  /bleeding/i,
-  /blood/i,
-  /fever/i,
-  /chills/i,
-  /spreading redness/i,
-  /redness spreading/i,
-  /red streak/i,
-  /pus/i,
-  /yellow discharge/i,
-  /green discharge/i,
-  /discharge/i,
-  /bad smell/i,
-  /foul smell/i,
-  /foul/i,
-  /severe pain/i,
-  /worsening pain/i,
-  /throbbing pain/i,
-  /increasing pain/i,
-  /intense pain/i,
-  /faint/i,
-  /fainting/i,
-  /fainted/i,
-  /dizziness/i,
-  /passed out/i,
-  /black tissue/i,
-  /black skin/i,
-  /black wound/i,
-  /black spot/i,
-  /black color/i,
-  /dead tissue/i,
-  /dead-looking/i,
-  /necrosis/i,
-  /black skin/i,
-  /animal bite/i,
-  /snake bite/i,
-  /dog bite/i,
-  /cat bite/i,
-  /diabetic/i,
-  /diabetic foot/i,
-  /difficulty breathing/i,
-  /shortness of breath/i
-];
-
+/**
+ * Contextual Urgent Symptom Detection
+ * Ensures normal questions with keywords (e.g., "Is a little bleeding during dressing change normal?")
+ * are NOT falsely flagged as urgent, while real urgent signs (fever, spreading redness, heavy bleeding, severe pain) are caught.
+ */
 function checkUrgentSymptoms(text) {
   if (!text) return false;
-  return URGENT_SYMPTOM_PATTERNS.some(pattern => pattern.test(text));
+  const rawLower = text.toLowerCase();
+  const q = normalizeQueryText(text);
+
+  // 1. Contextual Bleeding Check
+  const hasBleedingWord = /\b(bleeding|bleed|bled|blood)\b/i.test(q) || /\b(bleeding|bleed|bled|blood)\b/i.test(rawLower);
+  if (hasBleedingWord) {
+    const isUrgentBleeding = /(won\s*t\s*stop|will\s*not\s*stop|heavily|heavy|spurting|soaking|uncontrolled|non-stop|profuse|continuous)/i.test(q) ||
+                             /(won\s*t\s*stop|will\s*not\s*stop|heavily|heavy|spurting|soaking|uncontrolled|non-stop|profuse|continuous)/i.test(rawLower);
+    if (isUrgentBleeding) return true;
+  }
+
+  // 2. Contextual Redness Check
+  const hasRednessWord = /\b(redness|red|pinkness|inflamed)\b/i.test(q) || /\b(redness|red|pinkness|inflamed)\b/i.test(rawLower);
+  if (hasRednessWord) {
+    const isUrgentRedness = /(spreading|red streak|rapidly worsening|fever|hot to touch|expanding|traveling)/i.test(q) ||
+                            /(spreading|red streak|rapidly worsening|fever|hot to touch|expanding|traveling)/i.test(rawLower);
+    if (isUrgentRedness) return true;
+  }
+
+  // 3. Contextual Discharge Check
+  const hasDischargeWord = /\b(discharge|pus|ooze|drainage)\b/i.test(q) || /\b(discharge|pus|ooze|drainage)\b/i.test(rawLower);
+  if (hasDischargeWord) {
+    const isUrgentDischarge = /(bad smell|foul|worsening pain|fever|green pus|foul smell|foul discharge)/i.test(q) ||
+                             /(bad smell|foul|worsening pain|fever|green pus|foul smell|foul discharge)/i.test(rawLower);
+    if (isUrgentDischarge) return true;
+  }
+
+  // 4. Contextual Swelling Check
+  const hasSwellingWord = /\b(swelling|swoll|swollen)\b/i.test(q) || /\b(swelling|swoll|swollen)\b/i.test(rawLower);
+  if (hasSwellingWord) {
+    const isUrgentSwelling = /(rapidly increasing|severe swelling|swelling and fever|swelling with fever|spreading redness|numbness)/i.test(q) ||
+                            /(rapidly increasing|severe swelling|swelling and fever|swelling with fever|spreading redness|numbness)/i.test(rawLower);
+    if (isUrgentSwelling) return true;
+  }
+
+  // 5. Severe Pain Check
+  const hasSeverePain = /(severe.*pain|worsening.*pain|throbbing.*pain|intense.*pain)/i.test(q) ||
+                        /(severe.*pain|worsening.*pain|throbbing.*pain|intense.*pain)/i.test(rawLower);
+  if (hasSeverePain) return true;
+
+  // 6. Standalone High-Risk Symptoms
+  const HIGH_RISK_PATTERNS = [
+    /\bfever\b/i,
+    /high fever/i,
+    /feverish/i,
+    /\bchills\b/i,
+    /\bfaint/i,
+    /\bfainted\b/i,
+    /\bdizziness\b/i,
+    /passed out/i,
+    /black tissue/i,
+    /black skin/i,
+    /black wound/i,
+    /dead tissue/i,
+    /dead-looking/i,
+    /necrosis/i,
+    /animal bite/i,
+    /snake bite/i,
+    /dog bite/i,
+    /cat bite/i,
+    /diabetic foot/i,
+    /diabetic wound/i,
+    /difficulty breathing/i,
+    /shortness of breath/i,
+    /breathing/i
+  ];
+
+  return HIGH_RISK_PATTERNS.some(pattern => pattern.test(q) || pattern.test(rawLower));
 }
 
 class HelpService {
   /**
-   * Process a general wound recovery question with RAG, deterministic rules,
-   * conversation memory, and local fallback.
-   * 
-   * @param {string} userMessage
-   * @param {Array<{ sender: string, text: string }>} [history=[]]
-   * @returns {Promise<{ success: boolean, answer: string, hasUrgentSymptoms: boolean, category: string, source: string }>}
+   * Process a general wound recovery question with contextual safety rules,
+   * RAG context, conversation memory, and local fallback.
    */
   async processQuestion(userMessage, history = []) {
     const rawQuery = (userMessage || '').trim();
@@ -72,7 +95,7 @@ class HelpService {
       };
     }
 
-    // 1. Deterministic Urgent Symptom Rule
+    // 1. Contextual Urgent Symptom Rule (with typo normalization)
     const hasUrgent = checkUrgentSymptoms(rawQuery);
 
     // 2. Resolve Context & Retrieval (including history for follow-ups)
@@ -105,7 +128,8 @@ Do not diagnose wounds (never say "you have an infection", "this is infected", "
 Do not claim a person is safe.
 Do not prescribe medication, drug names, or medication doses.
 
-When a question mentions urgent warning signs such as uncontrolled bleeding, fever with spreading redness, pus, severe worsening pain, bad smell, fainting, serious bites, or diabetic foot wounds, advise the person to seek medical attention promptly.
+When a question describes severe urgent symptoms (such as uncontrolled heavy bleeding, high fever with spreading redness, foul pus with worsening pain, fainting, animal bites, or black tissue), advise the user to seek medical attention promptly.
+For mild non-urgent symptoms or questions like "My swelling came back", provide helpful educational guidance and ask concise follow-up questions if needed.
 
 Keep responses concise, clear, and practical (2 to 4 short paragraphs or bullet points).`;
 
@@ -117,7 +141,6 @@ ${retrieved.item.answer}
 ${historyText ? `Recent Conversation History:\n${historyText}\n` : ''}
 User Question: "${rawQuery}"`;
 
-        // Fetch Gemini API with 5-second timeout controller
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -157,10 +180,10 @@ User Question: "${rawQuery}"`;
       }
     }
 
-    // 4. Local Knowledge Base Fallback (Always resilient and reliable!)
+    // 4. Local Knowledge Base Fallback
     let fallbackAnswer = retrieved.item.answer;
     if (hasUrgent) {
-      fallbackAnswer = `⚠️ Warning symptoms detected.\n\n${retrieved.item.answer}\n\nThese symptoms (such as fever, spreading redness, pus, foul smell, severe worsening pain, or uncontrolled bleeding) can be urgent warning signs that require prompt medical evaluation. Please consult a healthcare professional or visit a health facility.`;
+      fallbackAnswer = `⚠️ Warning symptoms detected.\n\n${retrieved.item.answer}\n\nThese symptoms (such as heavy bleeding that won't stop, high fever, spreading redness, foul-smelling pus, or severe worsening pain) can be urgent warning signs requiring medical evaluation. Please consult a healthcare professional or visit a health facility.`;
     }
 
     return {

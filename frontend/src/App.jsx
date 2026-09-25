@@ -20,8 +20,24 @@ import { getToken } from './services/api';
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [pageParams, setPageParams] = useState({});
+  
+  // Persistent route restoration across browser refreshes
+  const getInitialRoute = () => {
+    try {
+      const saved = localStorage.getItem('woundwise_active_route');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { page: parsed.page || 'dashboard', params: parsed.params || {} };
+      }
+    } catch (e) {
+      // Fallback
+    }
+    return { page: 'dashboard', params: {} };
+  };
+
+  const initialRoute = getInitialRoute();
+  const [currentPage, setCurrentPage] = useState(initialRoute.page);
+  const [pageParams, setPageParams] = useState(initialRoute.params);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
@@ -75,13 +91,18 @@ export default function App() {
       // Ignored
     }
     setCurrentUser(null);
-    setCurrentPage('dashboard');
+    navigateTo('dashboard');
     showNotification('You have been signed out safely.', 'info');
   };
 
   const navigateTo = (page, params = {}) => {
     setCurrentPage(page);
     setPageParams(params);
+    try {
+      localStorage.setItem('woundwise_active_route', JSON.stringify({ page, params }));
+    } catch (e) {
+      // Ignored
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

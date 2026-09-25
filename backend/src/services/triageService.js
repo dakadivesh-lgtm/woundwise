@@ -20,20 +20,23 @@ const triageService = {
       ? (JSON.parse(s.symptom_data || '{}'))
       : (s.symptom_data || {});
 
+    // Check if current entry is baseline
+    const isBaseline = !baselineEntry || (baselineEntry.id === s.id);
+
     // Helper checks
     const isSnakeBite = Boolean(s.snake_bite || symptomData.snakeBite);
     const isAnimalBite = Boolean(s.animal_bite || symptomData.animalBite);
     const isBleedingUncontrolled = Boolean(s.bleeding_uncontrolled || symptomData.bleedingUncontrolled);
     const hasFever = Boolean(s.fever || symptomData.fever);
-    const isRednessSpreading = (s.redness_status === 'Spreading' || symptomData.rednessSpreading === true || symptomData.rednessSpreading === 'Yes');
+    const isRednessSpreading = (s.redness_status === 'Spreading' || symptomData.rednessStatus === 'Spreading');
     const hasDischarge = Boolean(s.discharge || symptomData.discharge);
     const hasBadSmell = Boolean(s.bad_smell || symptomData.badSmell);
     const isWorseningPain = Boolean(s.worsening_pain || symptomData.worseningPain);
     const hasDiabetes = Boolean(s.diabetes || symptomData.diabetes);
     const isFootWound = Boolean(s.foot_wound || symptomData.footWound);
-    const hasTetanusConcern = Boolean(s.tetanus_concern || symptomData.tetanusConcern === true || symptomData.tetanusConcern === 'Yes');
+    const hasTetanusConcern = Boolean(s.tetanus_concern || symptomData.tetanusConcern);
 
-    // --- RED CRITERIA ---
+    // --- RED CRITERIA (Safety Rules & Urgent Warning Signs) ---
     if (isSnakeBite) {
       level = 'red';
       reasons.push('Snake bite wound reported requiring immediate medical evaluation.');
@@ -67,12 +70,23 @@ const triageService = {
       reasons.push('Deep/dirty wound with unknown or outdated tetanus vaccination.');
     }
 
-    // Check significant area worsening if baseline or previous exists
-    if (baselineEntry && currentEntry.coverage_pct != null && baselineEntry.coverage_pct != null) {
-      const areaChangePct = ((currentEntry.coverage_pct - baselineEntry.coverage_pct) / baselineEntry.coverage_pct) * 100;
-      if (areaChangePct > 15) {
-        level = 'red';
-        reasons.push(`Wound area increased significantly (${areaChangePct.toFixed(1)}% larger than Day 1 baseline).`);
+    // Only evaluate longitudinal area change if NOT baseline entry!
+    if (!isBaseline) {
+      const hasPhysicalBoth = currentEntry.wound_area_cm2 != null && baselineEntry.wound_area_cm2 != null;
+      const hasRelativeBoth = currentEntry.wound_area_cm2 == null && baselineEntry.wound_area_cm2 == null && currentEntry.coverage_pct != null && baselineEntry.coverage_pct != null;
+
+      if (hasPhysicalBoth && baselineEntry.wound_area_cm2 > 0) {
+        const areaChangePct = ((currentEntry.wound_area_cm2 - baselineEntry.wound_area_cm2) / baselineEntry.wound_area_cm2) * 100;
+        if (areaChangePct > 15) {
+          level = 'red';
+          reasons.push(`Wound physical area increased significantly (${areaChangePct.toFixed(1)}% larger than Day 1 baseline).`);
+        }
+      } else if (hasRelativeBoth && baselineEntry.coverage_pct > 0) {
+        const areaChangePct = ((currentEntry.coverage_pct - baselineEntry.coverage_pct) / baselineEntry.coverage_pct) * 100;
+        if (areaChangePct > 15) {
+          level = 'red';
+          reasons.push(`Relative wound area increased significantly (${areaChangePct.toFixed(1)}% larger than Day 1 baseline).`);
+        }
       }
     }
 
@@ -86,39 +100,39 @@ const triageService = {
     }
 
     // --- AMBER CRITERIA ---
-    const isRednessSlightlyIncreased = (s.redness_status === 'Slightly Increased' || symptomData.rednessSpreading === 'Unsure');
-    const painScore = Number(s.pain_score || symptomData.painScore || 0);
-    const prevPainScore = previousEntry ? Number(previousEntry.pain_score || 0) : null;
-    const isPainUnchangedOrIncreased = prevPainScore !== null && painScore >= prevPainScore && painScore > 0;
-    const segConfidence = s.seg_confidence || (s.segmentation_data ? JSON.parse(typeof s.segmentation_data === 'string' ? s.segmentation_data : '{}').segConfidence : null);
-    const isLowSegConfidence = segConfidence === 'low' || segConfidence === 'none' || segConfidence === 'poor';
+    const isRednessSlightlyIncreased = (s.redness_status === 'Slightly Increased' || symptomData.rednessStatus === 'Slightly Increased');
+    const painScore = s.pain_score != null ? Number(s.pain_score) : (symptomData.painScore != null ? Number(symptomData.painScore) : null);
+    const prevPainScore = (previousEntry && previousEntry.pain_score != null) ? Number(previousEntry.pain_score) : null;
+    const isPainWorsened = prevPainScore !== null && painScore !== null && painScore > prevPainScore;
 
-    if (baselineEntry && currentEntry.coverage_pct != null && baselineEntry.coverage_pct != null) {
-      const areaChangePct = ((currentEntry.coverage_pct - baselineEntry.coverage_pct) / baselineEntry.coverage_pct) * 100;
-      if (areaChangePct >= 0) {
-        level = 'amber';
-        reasons.push('Wound area is not decreasing compared to Day 1 baseline.');
+    // Longitudinal area not decreasing (only for follow-up entries!)
+    if (!isBaseline) {
+      const hasPhysicalBoth = currentEntry.wound_area_cm2 != null && baselineEntry.wound_area_cm2 != null;
+      const hasRelativeBoth = currentEntry.wound_area_cm2 == null && baselineEntry.wound_area_cm2 == null && currentEntry.coverage_pct != null && baselineEntry.coverage_pct != null;
+
+      if (hasPhysicalBoth && baselineEntry.wound_area_cm2 > 0) {
+        const areaChangePct = ((currentEntry.wound_area_cm2 - baselineEntry.wound_area_cm2) / baselineEntry.wound_area_cm2) * 100;
+        if (areaChangePct >= 0) {
+          level = 'amber';
+          reasons.push('Wound physical area has not decreased compared to Day 1 baseline.');
+        }
+      } else if (hasRelativeBoth && baselineEntry.coverage_pct > 0) {
+        const areaChangePct = ((currentEntry.coverage_pct - baselineEntry.coverage_pct) / baselineEntry.coverage_pct) * 100;
+        if (areaChangePct >= 0) {
+          level = 'amber';
+          reasons.push('Relative wound area has not decreased compared to Day 1 baseline.');
+        }
       }
     }
 
     if (isRednessSlightlyIncreased) {
       level = 'amber';
-      reasons.push('Periwound redness has increased slightly since previous check.');
+      reasons.push('Periwound redness has increased slightly.');
     }
 
-    if (isPainUnchangedOrIncreased) {
+    if (isPainWorsened) {
       level = 'amber';
-      reasons.push(`Pain level remains elevated (${painScore}/10).`);
-    }
-
-    if (isLowSegConfidence) {
-      level = 'amber';
-      reasons.push('Automated boundary confidence is low; manual review recommended.');
-    }
-
-    if (symptomData.rednessSpreading === 'Unsure' || symptomData.tetanusConcern === 'Unsure') {
-      level = 'amber';
-      reasons.push('Uncertain symptom details reported; close monitoring advised.');
+      reasons.push(`Pain level increased from ${prevPainScore}/10 to ${painScore}/10.`);
     }
 
     if (level === 'amber') {
@@ -134,7 +148,11 @@ const triageService = {
     return {
       level: 'green',
       title: 'No urgent warning signs found',
-      reasons: [
+      reasons: isBaseline ? [
+        'Baseline assessment established cleanly',
+        'No systemic fever or spreading redness reported',
+        'No uncontrolled discharge or urgent risk factors reported'
+      ] : [
         'Wound area is stable or improving compared to baseline',
         'No systemic fever or spreading redness reported',
         'No uncontrolled discharge or urgent risk factors reported'
