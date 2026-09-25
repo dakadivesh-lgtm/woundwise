@@ -30,7 +30,7 @@ module.exports = {
 
   // File Uploads
   uploads: {
-    directory: path.resolve(__dirname, '../../uploads'),
+    directory: process.env.VERCEL ? '/tmp' : path.resolve(__dirname, '../../uploads'),
     maxFileSize: 15 * 1024 * 1024, // 15MB
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp']
   },

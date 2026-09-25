@@ -84,13 +84,15 @@ async function startServer() {
     await db.initDatabase();
     await seedDefaultUser();
 
-    app.listen(config.port, () => {
-      console.log(`🚀 WoundWise Backend running on port ${config.port}`);
-      console.log(`📡 Health check: http://localhost:${config.port}/api/health`);
-    });
+    if (!process.env.VERCEL) {
+      app.listen(config.port, () => {
+        console.log(`🚀 WoundWise Backend running on port ${config.port}`);
+        console.log(`📡 Health check: http://localhost:${config.port}/api/health`);
+      });
+    }
   } catch (err) {
     console.error('Failed to start server:', err);
-    process.exit(1);
+    if (!process.env.VERCEL) process.exit(1);
   }
 }
 

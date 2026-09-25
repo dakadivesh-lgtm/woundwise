@@ -6,7 +6,9 @@ const config = require('../config');
 let pool = null;
 let usePostgres = false;
 let localStore = null;
-const localDbPath = path.resolve(__dirname, '../../database/local_store.json');
+const localDbPath = process.env.VERCEL
+  ? '/tmp/local_store.json'
+  : path.resolve(__dirname, '../../database/local_store.json');
 
 // Initialize local fallback store
 function initLocalStore() {
