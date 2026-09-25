@@ -27,6 +27,29 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// Database & Seed Initialization Promise
+let initPromise = null;
+
+async function ensureInitialized() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      await db.initDatabase();
+      await seedDefaultUser();
+    })();
+  }
+  return initPromise;
+}
+
+// Middleware to ensure initialization completes before routes process
+app.use(async (req, res, next) => {
+  try {
+    await ensureInitialized();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -78,11 +101,10 @@ async function seedDefaultUser() {
   }
 }
 
-// Start Server
+// Start Server if running directly
 async function startServer() {
   try {
-    await db.initDatabase();
-    await seedDefaultUser();
+    await ensureInitialized();
 
     if (!process.env.VERCEL) {
       app.listen(config.port, () => {
