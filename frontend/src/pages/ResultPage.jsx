@@ -25,7 +25,53 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
     minute: '2-digit'
   });
 
+  const [isLocating, setIsLocating] = useState(false);
+
   const hasUrgent = resultData?.hasUrgentFlags || false;
+  const triageLevel = (resultData?.triageLevel || resultData?.triage_level || resultData?.triage || '').toLowerCase();
+  const showHospitalCTA = Boolean(
+    hasUrgent || 
+    triageLevel === 'amber' || 
+    triageLevel === 'red' || 
+    resultData?.hasUrgentFlags === true
+  );
+
+  const handleFindHospital = () => {
+    if (isLocating) return;
+    setIsLocating(true);
+
+    const fallbackUrl = 'https://www.google.com/maps/search/government+hospital+near+me';
+
+    if (!navigator || !navigator.geolocation) {
+      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        try {
+          const lat = encodeURIComponent(position.coords.latitude);
+          const lng = encodeURIComponent(position.coords.longitude);
+          const mapsUrl = `https://www.google.com/maps/search/government+hospital/@${lat},${lng},14z`;
+          window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+        } catch (err) {
+          window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 60000
+      }
+    );
+  };
 
   // Swelling Level calculation (None / Mild / Moderate / Severe)
   const validSwellingStates = ['None', 'Mild', 'Moderate', 'Severe'];
@@ -144,7 +190,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
       {showEditor && (
         <WoundSegmentationEditor
           imageUrl={photoUrl}
-          initialData={segData}
+          initialData={{ ...segData, entryId: resultData?.entryId || resultData?.entry?.id || resultData?.id }}
           onSave={handleSaveEditor}
           onCancel={() => setShowEditor(false)}
         />
@@ -254,12 +300,12 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
             <div className="result-metric-card">
               <div>
                 <div className="result-metric-label">Wound size / area</div>
-                <div className="result-metric-value-num" style={{ fontSize: segData?.physicalAreaCm2 ? '22px' : '22px' }}>
+                <div className="result-metric-value-num" style={{ fontSize: '20px' }}>
                   {segData?.physicalAreaCm2 
                     ? `${segData.physicalAreaCm2.toFixed(2)} cm²` 
                     : segData?.coveragePct != null 
                     ? `${segData.coveragePct.toFixed(1)}% ROI area`
-                    : (resultData?.woundArea || '41.5% ROI area')}
+                    : (resultData?.woundArea || 'Not measured')}
                 </div>
               </div>
               <div className="result-metric-subtext">Measured within selected wound boundary</div>
@@ -270,7 +316,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
               <div>
                 <div className="result-metric-label">Estimated redness coverage</div>
                 <div className="result-metric-value-num">
-                  {rednessPct || resultData?.rednessCoverage || '91.6%'}
+                  {rednessPct || resultData?.rednessCoverage || 'Not measured'}
                 </div>
               </div>
               <div className="result-metric-subtext">Measured across surrounding skin zone</div>
@@ -373,7 +419,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
             </div>
           </div>
 
-          {/* Status Strip */}
+          {/* Status Strip / Triage Evaluation */}
           <div 
             id="result-status-strip" 
             className={`result-status-strip ${hasUrgent ? 'status-has-warnings' : 'status-no-warnings'}`}
@@ -391,7 +437,7 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
             <div style={{ fontSize: '20px' }}>{hasUrgent ? '⚠️' : '✓'}</div>
             <div className="result-status-body">
               <div className="result-status-title" style={{ fontWeight: 600, fontSize: '13.5px', color: '#0F172A' }}>
-                {hasUrgent ? 'Warning symptoms reported.' : 'No listed critical warning signs reported.'}
+                {hasUrgent ? 'Warning symptoms reported.' : 'No urgent warning signs found.'}
               </div>
               <div className="result-status-desc" style={{ fontSize: '12px', color: '#64748B', marginTop: 2 }}>
                 {hasUrgent 
@@ -400,6 +446,41 @@ export default function ResultPage({ resultData, onNavigate, onShowNotification 
               </div>
             </div>
           </div>
+
+          {/* Government Hospital Locator CTA */}
+          {showHospitalCTA && (
+            <div className="hospital-locator-wrapper" style={{ marginTop: 14 }}>
+              <button 
+                type="button"
+                className="hospital-locator-card-btn"
+                onClick={handleFindHospital}
+                disabled={isLocating}
+                aria-label="Find a nearby government hospital"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '22px', flexShrink: 0 }} aria-hidden="true">🏥</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '14px', color: '#065F46', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {isLocating ? 'Finding nearby hospitals...' : 'Find a nearby government hospital'}
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#047857', marginTop: 2, lineHeight: 1.35 }}>
+                      Get directions to a public health facility near you.
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '18px', color: '#047857', fontWeight: 600, marginLeft: 12, flexShrink: 0 }} aria-hidden="true">
+                  {isLocating ? (
+                    <span className="spinner-icon" style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⌛</span>
+                  ) : (
+                    '→'
+                  )}
+                </div>
+              </button>
+              <div style={{ fontSize: '11px', color: '#64748B', marginTop: 6, paddingLeft: 4, lineHeight: '1.4' }}>
+                If symptoms become severe or rapidly worsen, seek emergency medical care.
+              </div>
+            </div>
+          )}
 
           {/* Actions inside panel */}
           <div style={{ display: 'flex', gap: 10, marginTop: 24, flexWrap: 'wrap' }}>

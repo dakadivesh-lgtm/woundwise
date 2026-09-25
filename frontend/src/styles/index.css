@@ -2183,3 +2183,136 @@ html, body {
   }
 }
 
+/* ══════════════════════════════════════════════════
+   IMAGE COMPARE MODAL
+   ══════════════════════════════════════════════════ */
+
+/* Full-screen darkened overlay */
+.camera-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* Side-by-side photo grid */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Individual photo card */
+.compare-card {
+  background: #F8FAF9;
+  border: 1px solid #E2E8E3;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+/* Photo image inside card */
+.compare-img {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 600px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+  .compare-img {
+    height: 200px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   GOVERNMENT HOSPITAL LOCATOR CTA CARD
+   ══════════════════════════════════════════════════ */
+.hospital-locator-card-btn {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  outline: none;
+  font-family: inherit;
+}
+
+.hospital-locator-card-btn:hover:not(:disabled) {
+  background: #DCFCE7 !important;
+  border-color: #86EFAC !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(6, 95, 70, 0.1) !important;
+}
+
+.hospital-locator-card-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+.hospital-locator-card-btn:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+}
+
+.hospital-locator-card-btn:disabled {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+/* Starter Question Chips on Help Page */
+.starter-chip-btn {
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #1E293B;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.starter-chip-btn:hover:not(:disabled) {
+  background: #153C2E;
+  color: #FFFFFF;
+  border-color: #153C2E;
+  transform: translateY(-1px);
+}
+
+.starter-chip-btn-sm {
+  padding: 5px 10px;
+  border-radius: 16px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.starter-chip-btn-sm:hover:not(:disabled) {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+
+

@@ -31,7 +31,9 @@ export async function request(endpoint, options = {}) {
   // If body is NOT FormData, set application/json
   if (options.body && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(options.body);
+    if (typeof options.body !== 'string') {
+      options.body = JSON.stringify(options.body);
+    }
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {

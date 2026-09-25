@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const woundRoutes = require('./routes/woundRoutes');
 const recordRoutes = require('./routes/recordRoutes');
 const supportRoutes = require('./routes/supportRoutes');
+const helpRoutes = require('./routes/helpRoutes');
 const userRoutes = require('./routes/userRoutes');
 
 // User model for seed
@@ -42,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/wounds', woundRoutes);
 app.use('/api/records', recordRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/help', helpRoutes);
 app.use('/api/user', userRoutes);
 
 // 404 Route handler

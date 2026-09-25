@@ -38,5 +38,26 @@ export const woundService = {
       method: 'DELETE'
     });
     return res;
+  },
+
+  async updateMeasurements(entryId, measurementData) {
+    const res = await request(`/wounds/entries/${entryId}/measurements`, {
+      method: 'PATCH',
+      body: measurementData
+    });
+    return res.data;
+  },
+
+  async updateSymptoms(entryId, symptomData) {
+    const res = await request(`/wounds/entries/${entryId}/symptoms`, {
+      method: 'PATCH',
+      body: symptomData
+    });
+    return res.data;
+  },
+
+  async getWoundComparison(woundId, entryId) {
+    const res = await request(`/wounds/${woundId}/comparison/${entryId}`);
+    return res.data;
   }
 };

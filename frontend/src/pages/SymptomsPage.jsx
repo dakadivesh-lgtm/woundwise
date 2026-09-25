@@ -1,49 +1,75 @@
 import React, { useState } from 'react';
-
-const ALL_SYMPTOMS = [
-  { id: 1, text: 'Snakebite.', urgent: true },
-  { id: 2, text: 'Animal bite.', urgent: true },
-  { id: 3, text: 'Deep or dirty wound with an outdated or unknown tetanus vaccination.', urgent: true },
-  { id: 4, text: 'Fever with redness that is spreading.', urgent: true },
-  { id: 5, text: 'Pus, bad smell, or pain that keeps getting worse.', urgent: true },
-  { id: 6, text: 'A foot wound in someone with diabetes.', urgent: true },
-  { id: 7, text: 'Bleeding that won\'t stop, dizziness, or fainting.', urgent: true },
-  { id: 8, text: 'Wound getting worse after 2–3 days.', urgent: false }
-];
+import { woundService } from '../services/woundService';
 
 const PROCESSING_STAGES = [
   { id: 1, title: 'Loading your completed photo assessment', progress: 16 },
   { id: 2, title: 'Reviewing your confirmed symptoms', progress: 33 },
-  { id: 3, title: 'Checking urgent warning signs', progress: 50 },
-  { id: 4, title: 'Combining assessment information', progress: 66 },
+  { id: 3, title: 'Evaluating safety rule engine', progress: 50 },
+  { id: 4, title: 'Calculating longitudinal progression', progress: 66 },
   { id: 5, title: 'Preparing next-step guidance', progress: 83 },
   { id: 6, title: 'Getting your results ready', progress: 100 }
 ];
 
 export default function SymptomsPage({ assessmentPayload, onComplete, onNavigate }) {
-  // excludedIds = symptoms the patient DOES NOT HAVE
-  // User clicks to cross out (exclude) a symptom
-  const [excludedIds, setExcludedIds] = useState(new Set());
+  // Explicit symptom states with safe default values (No / 0 / None)
+  const [painScore, setPainScore] = useState(4);
+  const [fever, setFever] = useState(false);
+  const [rednessStatus, setRednessStatus] = useState('Normal'); // 'Normal', 'Slightly Increased', 'Spreading'
+  const [discharge, setDischarge] = useState(false);
+  const [badSmell, setBadSmell] = useState(false);
+  const [worseningPain, setWorseningPain] = useState(false);
+  const [swellingLevel, setSwellingLevel] = useState('Mild'); // 'None', 'Mild', 'Moderate', 'Severe'
+  const [bleedingUncontrolled, setBleedingUncontrolled] = useState(false);
+  const [diabetes, setDiabetes] = useState(false);
+  const [footWound, setFootWound] = useState(false);
+  const [animalBite, setAnimalBite] = useState(false);
+  const [snakeBite, setSnakeBite] = useState(false);
+  const [tetanusConcern, setTetanusConcern] = useState(false);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [progressPct, setProgressPct] = useState(0);
 
-  const toggleExcluded = (id) => {
-    setExcludedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const startProcessing = () => {
+  const startProcessing = async () => {
     setIsProcessing(true);
     setCurrentStageIndex(0);
     setProgressPct(16);
+
+    const symptomData = {
+      painScore: Number(painScore),
+      pain_score: Number(painScore),
+      fever,
+      rednessStatus,
+      redness_status: rednessStatus,
+      discharge,
+      badSmell,
+      bad_smell: badSmell,
+      worseningPain,
+      worsening_pain: worseningPain,
+      swellingLevel,
+      swelling_level: swellingLevel,
+      bleedingUncontrolled,
+      bleeding_uncontrolled: bleedingUncontrolled,
+      diabetes,
+      footWound,
+      foot_wound: footWound,
+      animalBite,
+      animal_bite: animalBite,
+      snakeBite,
+      snake_bite: snakeBite,
+      tetanusConcern,
+      tetanus_concern: tetanusConcern
+    };
+
+    // Save symptoms against backend if entry ID exists
+    const entryId = assessmentPayload?.entry?.id || assessmentPayload?.entryId;
+    if (entryId) {
+      try {
+        await woundService.updateSymptoms(entryId, symptomData);
+      } catch (err) {
+        console.warn('Could not persist symptoms directly:', err.message);
+      }
+    }
 
     let stage = 0;
     const interval = setInterval(() => {
@@ -53,25 +79,28 @@ export default function SymptomsPage({ assessmentPayload, onComplete, onNavigate
         setProgressPct(PROCESSING_STAGES[stage].progress);
       } else {
         clearInterval(interval);
-        // Complete and advance
         setTimeout(() => {
-          // Confirmed symptoms are those NOT excluded
-          const confirmedSymptoms = ALL_SYMPTOMS.filter(s => !excludedIds.has(s.id));
+          const hasUrgentFlags = Boolean(
+            snakeBite || animalBite || bleedingUncontrolled ||
+            (fever && rednessStatus === 'Spreading') ||
+            (discharge && worseningPain) || (badSmell && worseningPain) ||
+            (diabetes && footWound) || tetanusConcern
+          );
+
           onComplete({
             ...assessmentPayload,
-            confirmedSymptoms,
-            hasUrgentFlags: confirmedSymptoms.some(s => s.urgent)
+            symptomData,
+            hasUrgentFlags
           });
-        }, 600);
+        }, 500);
       }
-    }, 750);
+    }, 550);
   };
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px' }}>
       {!isProcessing ? (
-        /* Symptom Checklist Card */
-        <div className="symptom-card">
+        <div className="symptom-card" style={{ maxWidth: '640px', width: '100%' }}>
           <div className="symptom-status-tag">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
@@ -79,50 +108,156 @@ export default function SymptomsPage({ assessmentPayload, onComplete, onNavigate
             <span>Photo analysis complete</span>
           </div>
 
-          <h2 className="symptom-heading">Check your symptoms</h2>
+          <h2 className="symptom-heading">Patient Symptom Check</h2>
           <p className="symptom-instructions">
-            Cross out anything that does not apply to you. Leave symptoms you have unchanged.
+            Please answer these explicit questions to help us evaluate safety and tracking.
           </p>
 
-          <div className="symptom-list" role="group" aria-label="Symptom review list">
-            {ALL_SYMPTOMS.map((sym) => {
-              const isExcluded = excludedIds.has(sym.id);
-              return (
-                <div
-                  key={sym.id}
-                  className={`symptom-row ${isExcluded ? 'is-excluded' : ''}`}
-                  onClick={() => toggleExcluded(sym.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span className="symptom-text">{sym.text}</span>
+          <form style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '20px' }} onSubmit={(e) => { e.preventDefault(); startProcessing(); }}>
+            {/* 1. Pain Score */}
+            <div style={{ background: '#F8FAF9', border: '1px solid #E2E8E3', borderRadius: '12px', padding: '16px' }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#153C2E', marginBottom: '8px' }}>
+                Current Pain Level (0 — 10): <span style={{ color: '#2563EB', fontWeight: 700 }}>{painScore} / 10</span>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                value={painScore}
+                onChange={(e) => setPainScore(e.target.value)}
+                style={{ width: '100%', accentColor: '#2563EB' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                <span>0 (No pain)</span>
+                <span>5 (Moderate)</span>
+                <span>10 (Severe)</span>
+              </div>
+            </div>
+
+            {/* 2. Swelling Level */}
+            <div style={{ background: '#F8FAF9', border: '1px solid #E2E8E3', borderRadius: '12px', padding: '16px' }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#153C2E', marginBottom: '10px' }}>
+                Swelling Level around wound area:
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                {['None', 'Mild', 'Moderate', 'Severe'].map(lvl => (
                   <button
+                    key={lvl}
                     type="button"
-                    className="symptom-toggle-btn"
-                    aria-pressed={!isExcluded}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleExcluded(sym.id);
+                    onClick={() => setSwellingLevel(lvl)}
+                    style={{
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: swellingLevel === lvl ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                      background: swellingLevel === lvl ? '#EFF6FF' : '#FFFFFF',
+                      color: swellingLevel === lvl ? '#1E40AF' : '#334155',
+                      fontWeight: 600,
+                      cursor: 'pointer'
                     }}
                   >
-                    <span className="symptom-circle" aria-hidden="true" />
+                    {lvl}
                   </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Redness Spreading */}
+            <div style={{ background: '#F8FAF9', border: '1px solid #E2E8E3', borderRadius: '12px', padding: '16px' }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#153C2E', marginBottom: '10px' }}>
+                Is redness spreading beyond the wound edge?
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { label: 'No (Normal)', val: 'Normal' },
+                  { label: 'Slightly Increased', val: 'Slightly Increased' },
+                  { label: 'Spreading', val: 'Spreading' }
+                ].map(opt => (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setRednessStatus(opt.val)}
+                    style={{
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: rednessStatus === opt.val ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                      background: rednessStatus === opt.val ? '#EFF6FF' : '#FFFFFF',
+                      color: rednessStatus === opt.val ? '#1E40AF' : '#334155',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontSize: '12.5px'
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Yes/No Question Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {[
+                { label: 'Do you have a fever?', state: fever, setter: setFever },
+                { label: 'Is there pus or discharge?', state: discharge, setter: setDischarge },
+                { label: 'Is there a bad smell?', state: badSmell, setter: setBadSmell },
+                { label: 'Is pain getting worse?', state: worseningPain, setter: setWorseningPain },
+                { label: 'Is bleeding difficult to stop?', state: bleedingUncontrolled, setter: setBleedingUncontrolled },
+                { label: 'Do you have diabetes?', state: diabetes, setter: setDiabetes },
+                { label: 'Is this wound on the foot?', state: footWound, setter: setFootWound },
+                { label: 'Was it caused by an animal bite?', state: animalBite, setter: setAnimalBite },
+                { label: 'Was it caused by a snake bite?', state: snakeBite, setter: setSnakeBite },
+                { label: 'Tetanus concern (deep/dirty)?', state: tetanusConcern, setter: setTetanusConcern }
+              ].map((q, idx) => (
+                <div key={idx} style={{ background: '#F8FAF9', border: '1px solid #E2E8E3', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#153C2E', marginBottom: '8px' }}>{q.label}</span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => q.setter(true)}
+                      style={{
+                        flex: 1,
+                        padding: '6px',
+                        borderRadius: '6px',
+                        border: q.state === true ? '2px solid #DC2626' : '1px solid #CBD5E1',
+                        background: q.state === true ? '#FEF2F2' : '#FFFFFF',
+                        color: q.state === true ? '#991B1B' : '#334155',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => q.setter(false)}
+                      style={{
+                        flex: 1,
+                        padding: '6px',
+                        borderRadius: '6px',
+                        border: q.state === false ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                        background: q.state === false ? '#EFF6FF' : '#FFFFFF',
+                        color: q.state === false ? '#1E40AF' : '#334155',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      No
+                    </button>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
 
-          <p className="symptom-footer-note">Continuing confirms that you have reviewed every symptom.</p>
-
-          <button
-            type="button"
-            className="btn-confirm-symptoms"
-            onClick={startProcessing}
-          >
-            Confirm symptoms and view result
-          </button>
+            <button
+              type="submit"
+              className="btn-confirm-symptoms"
+              style={{ marginTop: '10px' }}
+            >
+              Confirm symptoms & calculate results
+            </button>
+          </form>
         </div>
       ) : (
-        /* 6-Stage Health Track Processing Card */
+        /* Health Track Processing Card */
         <div className="processing-card" role="region" aria-label="Health Track Analysis" style={{ display: 'block' }}>
           <div className="processing-header">
             <div className="processing-loader-box" aria-hidden="true">
@@ -137,7 +272,6 @@ export default function SymptomsPage({ assessmentPayload, onComplete, onNavigate
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div className="processing-progress-track">
             <div
               className="processing-progress-fill"
@@ -145,7 +279,6 @@ export default function SymptomsPage({ assessmentPayload, onComplete, onNavigate
             />
           </div>
 
-          {/* Sequential Stages List */}
           <div className="processing-stages-list">
             {PROCESSING_STAGES.map((stg, idx) => {
               const isPast    = idx < currentStageIndex;

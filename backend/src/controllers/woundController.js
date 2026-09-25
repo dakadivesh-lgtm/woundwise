@@ -2,6 +2,8 @@ const woundModel = require('../models/woundModel');
 const woundEntryModel = require('../models/woundEntryModel');
 const assessmentModel = require('../models/assessmentModel');
 const assessmentService = require('../services/assessmentService');
+const triageService = require('../services/triageService');
+const comparisonService = require('../services/comparisonService');
 const fileService = require('../services/fileService');
 
 const woundController = {
@@ -246,6 +248,112 @@ const woundController = {
       }
 
       res.json({ success: true, message: 'Wound record and associated entries deleted successfully.' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * Persist wound segmentation measurements
+   */
+  async updateEntryMeasurements(req, res, next) {
+    try {
+      const { entryId } = req.params;
+      const userId = req.user.id;
+      const measurementData = req.body || {};
+
+      const existing = await woundEntryModel.getEntryById(entryId, userId);
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Wound entry not found.' });
+      }
+
+      const updated = await woundEntryModel.updateMeasurements(entryId, userId, measurementData);
+
+      // Recalculate triage and comparison
+      const baseline = await woundEntryModel.getBaselineEntry(existing.wound_id, userId);
+      const allEntries = await woundEntryModel.getEntriesByWound(existing.wound_id, userId);
+      const comparison = comparisonService.buildWoundComparison(updated, baseline, allEntries);
+
+      await woundEntryModel.updateTriageAndComparison(entryId, userId, {
+        triageLevel: comparison.triage.level,
+        triageReasons: comparison.triage.reasons,
+        comparisonData: comparison
+      });
+
+      res.json({
+        success: true,
+        message: 'Measurements updated successfully.',
+        data: {
+          entry: await woundEntryModel.getEntryById(entryId, userId),
+          comparison
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * Persist patient symptom answers
+   */
+  async updateEntrySymptoms(req, res, next) {
+    try {
+      const { entryId } = req.params;
+      const userId = req.user.id;
+      const symptomData = req.body || {};
+
+      const existing = await woundEntryModel.getEntryById(entryId, userId);
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Wound entry not found.' });
+      }
+
+      const updated = await woundEntryModel.updateSymptoms(entryId, userId, symptomData);
+
+      // Recalculate triage and comparison
+      const baseline = await woundEntryModel.getBaselineEntry(existing.wound_id, userId);
+      const allEntries = await woundEntryModel.getEntriesByWound(existing.wound_id, userId);
+      const comparison = comparisonService.buildWoundComparison(updated, baseline, allEntries);
+
+      await woundEntryModel.updateTriageAndComparison(entryId, userId, {
+        triageLevel: comparison.triage.level,
+        triageReasons: comparison.triage.reasons,
+        comparisonData: comparison
+      });
+
+      res.json({
+        success: true,
+        message: 'Symptoms updated successfully.',
+        data: {
+          entry: await woundEntryModel.getEntryById(entryId, userId),
+          comparison
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * Get longitudinal comparison data for a wound entry vs Day 1 baseline
+   */
+  async getWoundComparison(req, res, next) {
+    try {
+      const { id, entryId } = req.params;
+      const userId = req.user.id;
+
+      const entry = await woundEntryModel.getEntryById(entryId, userId);
+      if (!entry) {
+        return res.status(404).json({ success: false, message: 'Wound entry not found.' });
+      }
+
+      const baseline = await woundEntryModel.getBaselineEntry(id, userId);
+      const allEntries = await woundEntryModel.getEntriesByWound(id, userId);
+      const comparison = comparisonService.buildWoundComparison(entry, baseline, allEntries);
+
+      res.json({
+        success: true,
+        data: comparison
+      });
     } catch (err) {
       next(err);
     }

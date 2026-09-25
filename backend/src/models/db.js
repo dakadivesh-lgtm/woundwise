@@ -188,7 +188,7 @@ function executeLocalQuery(sql, params) {
 
   // 3. UPDATE queries
   if (lower.startsWith('update')) {
-    const matchUpdate = sql.match(/update\s+([a-zA-Z0-9_]+)\s+set\s+(.*?)(?:\s+where\s+(.*))?$/i);
+    const matchUpdate = sql.match(/update\s+([a-zA-Z0-9_]+)\s+set\s+(.*?)(?:\s+where\s+(.*))?$/is);
     if (matchUpdate) {
       const tableName = matchUpdate[1].toLowerCase();
       const setClause = matchUpdate[2];
@@ -196,18 +196,22 @@ function executeLocalQuery(sql, params) {
 
       if (!localStore[tableName]) return { rows: [], rowCount: 0 };
 
-      // Parse SET statements
-      const setPairs = setClause.split(',').map(s => s.trim());
+      // Parse SET statements robustly
+      const setPairs = setClause.split(/,\s*(?=[a-zA-Z0-9_]+\s*=)/).map(s => s.trim());
       const updates = {};
       setPairs.forEach(pair => {
-        const [col, val] = pair.split('=').map(p => p.trim());
-        if (val.startsWith('$')) {
-          const paramIdx = parseInt(val.substring(1), 10) - 1;
-          updates[col.toLowerCase()] = params[paramIdx];
-        } else if (val.toLowerCase() === 'current_timestamp' || val.toLowerCase() === 'now()') {
-          updates[col.toLowerCase()] = new Date().toISOString();
-        } else {
-          updates[col.toLowerCase()] = val.replace(/^['"]|['"]$/g, '');
+        const eqIdx = pair.indexOf('=');
+        if (eqIdx !== -1) {
+          const col = pair.substring(0, eqIdx).trim().toLowerCase();
+          const val = pair.substring(eqIdx + 1).trim();
+          if (val.startsWith('$')) {
+            const paramIdx = parseInt(val.substring(1), 10) - 1;
+            updates[col] = params[paramIdx];
+          } else if (val.toLowerCase() === 'current_timestamp' || val.toLowerCase() === 'now()') {
+            updates[col] = new Date().toISOString();
+          } else {
+            updates[col] = val.replace(/^['"]|['"]$/g, '');
+          }
         }
       });
 
@@ -217,15 +221,16 @@ function executeLocalQuery(sql, params) {
       localStore[tableName] = localStore[tableName].map(row => {
         let match = true;
         if (whereClause) {
-          // Check matching criteria
-          if (whereClause.includes('id = $') || whereClause.includes('user_id = $')) {
-            const m = whereClause.match(/([a-zA-Z0-9_]+)\s*=\s*\$(\d+)/i);
+          const conditions = whereClause.split(/\s+and\s+/i);
+          match = conditions.every(cond => {
+            const m = cond.match(/([a-zA-Z0-9_.]+)\s*=\s*\$(\d+)/i);
             if (m) {
-              const col = m[1].toLowerCase();
-              const val = params[parseInt(m[2], 10) - 1];
-              match = (row[col] === val);
+              const col = m[1].split('.').pop().toLowerCase();
+              const targetVal = params[parseInt(m[2], 10) - 1];
+              return String(row[col]) === String(targetVal);
             }
-          }
+            return true;
+          });
         }
 
         if (match) {
@@ -244,7 +249,7 @@ function executeLocalQuery(sql, params) {
 
   // 4. DELETE queries
   if (lower.startsWith('delete from')) {
-    const matchDelete = sql.match(/delete\s+from\s+([a-zA-Z0-9_]+)(?:\s+where\s+(.*))?/i);
+    const matchDelete = sql.match(/delete\s+from\s+([a-zA-Z0-9_]+)(?:\s+where\s+(.*))?/is);
     if (matchDelete) {
       const tableName = matchDelete[1].toLowerCase();
       const whereClause = matchDelete[2];
@@ -253,18 +258,36 @@ function executeLocalQuery(sql, params) {
 
       let deletedCount = 0;
       localStore[tableName] = localStore[tableName].filter(row => {
-        let match = false;
+        let match = true;
         if (whereClause) {
-          const m = whereClause.match(/([a-zA-Z0-9_]+)\s*=\s*\$(\d+)/i);
-          if (m) {
-            const col = m[1].toLowerCase();
-            const val = params[parseInt(m[2], 10) - 1];
-            match = (row[col] === val);
-          }
+          const conditions = whereClause.split(/\s+and\s+/i);
+          match = conditions.every(cond => {
+            const m = cond.match(/([a-zA-Z0-9_.]+)\s*=\s*\$(\d+)/i);
+            if (m) {
+              const col = m[1].split('.').pop().toLowerCase();
+              const targetVal = params[parseInt(m[2], 10) - 1];
+              return String(row[col]) === String(targetVal);
+            }
+            return true;
+          });
         }
         if (match) deletedCount++;
         return !match;
       });
+
+      // Cascade deletion for local JSON engine mode
+      if (tableName === 'wounds' && deletedCount > 0 && params[0]) {
+        const deletedWoundId = params[0];
+        if (localStore.wound_entries) {
+          const deletedEntryIds = localStore.wound_entries
+            .filter(e => e.wound_id === deletedWoundId)
+            .map(e => e.id);
+          localStore.wound_entries = localStore.wound_entries.filter(e => e.wound_id !== deletedWoundId);
+          if (localStore.assessments) {
+            localStore.assessments = localStore.assessments.filter(a => !deletedEntryIds.includes(a.entry_id) && a.wound_id !== deletedWoundId);
+          }
+        }
+      }
 
       saveLocalStore();
       return { rows: [], rowCount: deletedCount };
@@ -276,7 +299,7 @@ function executeLocalQuery(sql, params) {
 
 function filterRows(tableName, sql, params, rows) {
   // Extract simple where clauses: col = $1 AND col2 = $2
-  const matchWhere = sql.match(/where\s+(.*?)(?:\s+order\s+by|\s+limit|$)/i);
+  const matchWhere = sql.match(/where\s+(.*?)(?:\s+order\s+by|\s+limit|$)/is);
   if (!matchWhere) return rows;
 
   const whereStr = matchWhere[1];
@@ -297,9 +320,8 @@ function filterRows(tableName, sql, params, rows) {
 }
 
 function handleLocalJoin(sql, params) {
-  // Support common join: wound_entries JOIN assessments, or wounds JOIN wound_entries
   const lower = sql.toLowerCase();
-  if (lower.includes('wound_entries') && lower.includes('assessments')) {
+  if (lower.includes('wound_entries')) {
     const entries = localStore.wound_entries || [];
     const assessments = localStore.assessments || [];
     const wounds = localStore.wounds || [];

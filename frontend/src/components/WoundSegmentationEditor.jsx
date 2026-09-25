@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { woundService } from '../services/woundService';
 
 // A simple 2D geometry helper to calculate polygon area
 function getPolygonArea(points) {
@@ -378,18 +379,35 @@ export default function WoundSegmentationEditor({ imageUrl, initialData, onSave,
     }
   }
 
-  const handleConfirm = () => {
-    onSave({
+  const handleConfirm = async () => {
+    const dataToSave = {
       coveragePct,
+      coverage_pct: coveragePct,
       physicalAreaCm2,
+      wound_area_cm2: physicalAreaCm2,
+      woundAreaPx,
+      wound_area_px: woundAreaPx,
       roi,
       boundary,
       hasScaleMarker,
       scaleLine,
       quality,
       segConfidence,
-      imageUrl
-    });
+      seg_confidence: segConfidence,
+      imageWidth: offscreenRef.current?.width || 640,
+      imageHeight: offscreenRef.current?.height || 480
+    };
+
+    const entryId = initialData?.entryId || initialData?.id;
+    if (entryId) {
+      try {
+        await woundService.updateMeasurements(entryId, dataToSave);
+      } catch (err) {
+        console.warn('Could not persist measurements to server:', err.message);
+      }
+    }
+
+    onSave(dataToSave);
   };
 
   return (
